@@ -100,18 +100,20 @@ Stop = max(candle-1 High, candle-3 High)
 ```
 Takes the higher of the two boring candles' highs — the strongest resistance in the pattern. If price breaks above either boring candle, the pattern is invalidated.
 
-### Target (2:1 risk/reward)
+### Target (1:3 risk/reward)
+
+Only signals with a positive risk are included. The target is always 3× the risk, giving a minimum 1:3 R/R on every trade.
 
 **LONG:**
 ```
 Risk   = Entry − Stop
-Target = Entry + (2 × Risk)
+Target = Entry + (3 × Risk)
 ```
 
 **SHORT:**
 ```
 Risk   = Stop − Entry
-Target = Entry − (2 × Risk)
+Target = Entry − (3 × Risk)
 ```
 
 ### Example — SHORT signal
@@ -120,7 +122,7 @@ Target = Entry − (2 × Risk)
 Entry  = 733.48   ← close of candle-3
 Stop   = 734.28   ← highest High of candle-1 or candle-3
 Risk   = 734.28 − 733.48 = 0.80
-Target = 733.48 − (2 × 0.80) = 731.88
+Target = 733.48 − (3 × 0.80) = 731.08
 ```
 
 ---

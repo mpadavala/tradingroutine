@@ -76,12 +76,14 @@ for i in range(2, len(df)):
         entry     = round(float(c3["Close"]), 4)
         stop_loss = round(min(float(c1["Low"]), float(c3["Low"])), 4)
         risk      = round(entry - stop_loss, 4)
+        if risk <= 0:
+            continue
         signals.append({
             "direction": "LONG",
             "signal_time": to_cdt(t3),
             "entry": entry,
             "stop_loss": stop_loss,
-            "target": round(entry + 2 * risk, 4),
+            "target": round(entry + 3 * risk, 4),
         })
 
     # Bearish: GREEN boring → RED full → RED boring
@@ -91,12 +93,14 @@ for i in range(2, len(df)):
         entry     = round(float(c3["Close"]), 4)
         stop_loss = round(max(float(c1["High"]), float(c3["High"])), 4)
         risk      = round(stop_loss - entry, 4)
+        if risk <= 0:
+            continue
         signals.append({
             "direction": "SHORT",
             "signal_time": to_cdt(t3),
             "entry": entry,
             "stop_loss": stop_loss,
-            "target": round(entry - 2 * risk, 4),
+            "target": round(entry - 3 * risk, 4),
         })
 
 # ── Output ─────────────────────────────────────────────────────────────────────
@@ -141,9 +145,9 @@ else:
     print("  " + hline("└", "┴", "┘"))
 
     print()
-    print("  Risk/Reward : 2:1 on all signals")
+    print("  Risk/Reward : 1:3 minimum on all signals")
     print("  Stop loss   = extreme low/high of candle-1 or candle-3")
-    print("  Target      = entry ± 2× risk")
+    print("  Target      = entry ± 3× risk")
     print()
     print("  Pattern legend:")
     print("    Red boring → Green full → Green boring  →  LONG")
