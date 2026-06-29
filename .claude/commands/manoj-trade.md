@@ -18,6 +18,15 @@ Interval normalization — if a plain number is given, treat it as minutes:
 - `1day` or `1d` or `day` → `1d`
 - `1wk` or `wk` or `week` → `1wk`
 
+## Signal Filters (applied automatically by the script)
+
+All four must pass for a signal to appear in output:
+
+1. **Proximity** — entry within 0.3% of previous trading day high or low
+2. **Direction alignment** — LONG only near Prev Low; SHORT only near Prev High
+3. **Open filter** — skip signals in the first 30 minutes after open (8:30–9:00 CDT)
+4. **Minimum risk** — skip zero-risk patterns (entry == stop)
+
 ## Task
 
 Run the following command using the Bash tool, substituting the parsed values:

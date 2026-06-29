@@ -41,7 +41,14 @@ A Claude Code skill for scanning stocks for the **Manoj-Trade** three-candle pat
 
 ### How it works
 
-The skill runs a Python script that downloads OHLC candle data from Yahoo Finance and scans every group of three consecutive candles for the Manoj-Trade pattern. Each signal is printed as a table row with entry, stop, and target prices.
+The skill runs a Python script that downloads OHLC candle data from Yahoo Finance and scans every group of three consecutive candles for the Manoj-Trade pattern. Signals pass through four filters before appearing in the output:
+
+1. **Proximity to key level** — entry must be within 0.3% of the previous trading day's high or low
+2. **Direction alignment** — LONG signals only qualify near Prev Low; SHORT signals only near Prev High
+3. **Open filter** — signals within the first 30 minutes after market open (8:30–9:00 CDT) are skipped
+4. **Minimum risk** — zero-risk patterns (entry == stop) are discarded
+
+Each qualifying signal is printed as a table row with entry, stop, target, dollar amounts, key level proximity, and outcome.
 
 ---
 
@@ -74,6 +81,40 @@ Candle-1: Green + Boring   (buyers losing momentum)
 Candle-2: Red   + Full     (sellers take over strongly)
 Candle-3: Red   + Boring   (sellers consolidate — pattern completes)
 ```
+
+---
+
+## Signal Filters
+
+All four filters must pass for a signal to appear in the output.
+
+### 1. Proximity to previous day high/low (0.3%)
+
+The script fetches the previous trading day's OHLC data and checks whether the entry price is within 0.3% of that day's high or low. Patterns that form away from these key levels are discarded.
+
+```
+Near Prev High  if  |entry − prev_high| / prev_high ≤ 0.003
+Near Prev Low   if  |entry − prev_low|  / prev_low  ≤ 0.003
+```
+
+### 2. Direction alignment
+
+Trades must be taken in the direction the key level supports:
+
+| Signal | Required proximity |
+|--------|--------------------|
+| LONG   | Near Prev Low only |
+| SHORT  | Near Prev High only |
+
+A LONG near Prev High (resistance) or SHORT near Prev Low (support) is filtered out because it is fighting the level rather than bouncing off it.
+
+### 3. Open filter (first 30 minutes)
+
+Signals triggered between 8:30 CDT and 9:00 CDT are skipped. The opening range is the most volatile period of the day and produces disproportionate false breakouts.
+
+### 4. Minimum risk
+
+Signals where `entry == stop` produce zero risk and are discarded.
 
 ---
 
@@ -130,15 +171,50 @@ Target = 733.48 − (3 × 0.80) = 731.08
 ## Output
 
 ```
-  SPY — 1m candles — Last 3 day(s)  (2026-06-25 → 2026-06-28)
-  650 candles scanned, 20 pattern(s) found (14 LONG, 6 SHORT).
+  SPY — 1m candles — Last 5 day(s)  (2026-06-23 → 2026-06-28)
+  1170 candles scanned, 10 pattern(s) near prev-day H/L (6 LONG, 4 SHORT).
 
-  ┌────┬────────┬───────────┬──────────────────────┬────────┬────────┬─────────┐
-  │ #  │ Ticker │ Direction │ Signal Time (CDT)    │ Entry  │ Stop   │ Target  │
+  ┌───┬────────┬───────────┬──────────────────────┬────────┬────────┬─────────┬────────┬──────────┬──────────────────┬───────────────────────────────────┬─────────┐
+  │ # │ Ticker │ Direction │ Signal Time (CDT)    │ Entry  │ Stop   │ Stop $  │ Target │ Target $ │ Near             │ Outcome                           │ P&L     │
+  ├───┼────────┼───────────┼──────────────────────┼────────┼────────┼─────────┼────────┼──────────┼──────────────────┼───────────────────────────────────┼─────────┤
+  │ 1 │ SPY    │ SHORT     │ 2026-06-24 10:32 CDT │ 739.29 │ 739.93 │ -0.6400 │ 737.37 │ +1.9200  │ Prev High 739.63 │ Target Hit   2026-06-24 11:36 CDT │ +1.9200 │
+  │ 2 │ SPY    │ LONG      │ 2026-06-24 13:14 CDT │ 732.88 │ 732.55 │ -0.3300 │ 733.87 │ +0.9900  │ Prev Low  732.30 │ Target Hit   2026-06-24 13:19 CDT │ +0.9900 │
   ...
+
+  Total P&L   : +4.7251  (4 wins, 6 losses)
+
+  Filters     : entry within 0.3% of prev-day H/L  |  LONG near Prev Low only  |  SHORT near Prev High only  |  skip first 30min after open
 ```
 
 All times are shown in **CDT (Central Daylight Time)**.
+
+### Columns
+
+| Column | Description |
+|--------|-------------|
+| `#` | Signal number |
+| `Ticker` | Stock symbol |
+| `Direction` | `LONG` or `SHORT` |
+| `Signal Time (CDT)` | Timestamp of candle-3 close (when pattern completes) |
+| `Entry` | Close price of candle-3 |
+| `Stop` | Stop loss price |
+| `Stop $` | Dollar risk per share (negative) |
+| `Target` | Target price at 3× risk |
+| `Target $` | Dollar gain per share if target hit (positive) |
+| `Near` | Previous trading day level the entry is near |
+| `Outcome` | Result after signal (see below) |
+| `P&L` | Realized P&L per share, or `—` if still open |
+
+### Outcome column
+
+| Value | Meaning |
+|-------|---------|
+| `Target Hit   <timestamp>` | Price reached the 3× target; timestamp is the candle where it was first touched |
+| `Stopped Out  <timestamp>` | Price hit the stop loss before the target; timestamp is the candle where it was first touched |
+| `Closed EOD   <timestamp>` | Neither level was hit; trade closed at the last candle of the signal day at market price |
+| `Open` | Signal is in the most recent candles and data has not yet resolved |
+
+When a single candle touches both the stop and the target, the stop loss is assumed to be hit first (conservative/pessimistic assumption). All trades are closed at end of day — no overnight holds.
 
 ---
 
