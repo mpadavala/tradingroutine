@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 /Users/Murali/dev/tradingroutine/.claude/scripts/manoj_trade_analysis.py *)"
+    ]
+  }
+}
